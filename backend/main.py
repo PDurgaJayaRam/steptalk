@@ -24,7 +24,9 @@ def _resolve_host(host):
         return None
 
 VOICE_IP = _resolve_host("voice.bandwidth.com") or "104.18.31.60"
-print(f"Using Voice API IP: {VOICE_IP}")
+API_IP = _resolve_host("api.bandwidth.com") or "34.226.24.105"
+AUTH_IP = _resolve_host("auth.bandwidth.com") or "52.71.117.130"
+print(f"Voice API IP: {VOICE_IP}, API IP: {API_IP}, Auth IP: {AUTH_IP}")
 
 app = FastAPI()
 
@@ -76,10 +78,9 @@ audio_files: dict[str, bytes] = {}  # filename -> audio bytes
 # ============================================================
 
 async def get_bw_token() -> str:
-    auth_ip = _resolve_host("auth.bandwidth.com") or "auth.bandwidth.com"
     async with httpx.AsyncClient(timeout=30.0) as client:
         res = await client.post(
-            f"https://{auth_ip}/v1/oauth2/token",
+            f"https://{AUTH_IP}/v1/oauth2/token",
             auth=(BW_CLIENT_ID, BW_CLIENT_SECRET),
             data={"grant_type": "client_credentials"},
             headers={
@@ -519,10 +520,9 @@ async def api_setup():
     """Update Bandwidth application callback URLs to point to this server."""
     try:
         token = await get_bw_token()
-        api_ip = _resolve_host("api.bandwidth.com") or "api.bandwidth.com"
         async with httpx.AsyncClient(timeout=30.0) as client:
             res = await client.put(
-                f"https://{api_ip}/api/accounts/{BW_ACCOUNT_ID}/applications/{BW_APPLICATION_ID}",
+                f"https://{API_IP}/api/accounts/{BW_ACCOUNT_ID}/applications/{BW_APPLICATION_ID}",
                 headers={
                     "Authorization": f"Bearer {token}",
                     "Content-Type": "application/json",
