@@ -78,7 +78,7 @@ audio_files: dict[str, bytes] = {}  # filename -> audio bytes
 # ============================================================
 
 async def get_bw_token() -> str:
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
         res = await client.post(
             f"https://{AUTH_IP}/v1/oauth2/token",
             auth=(BW_CLIENT_ID, BW_CLIENT_SECRET),
@@ -210,7 +210,7 @@ async def bw_create_call(to_number: str) -> dict:
     last_err = None
     for attempt in range(3):
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
                 res = await client.post(
                     f"{VOICE_API_BASE}/accounts/{BW_ACCOUNT_ID}/calls",
                     headers={
@@ -242,7 +242,7 @@ async def bw_hangup_call(call_id: str) -> dict:
     token = await get_bw_token()
     for attempt in range(3):
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
                 res = await client.post(
                     f"{VOICE_API_BASE}/accounts/{BW_ACCOUNT_ID}/calls/{call_id}",
                     headers={
@@ -264,7 +264,7 @@ async def bw_get_calls() -> list:
     token = await get_bw_token()
     for attempt in range(3):
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
                 res = await client.get(
                     f"{VOICE_API_BASE}/accounts/{BW_ACCOUNT_ID}/calls",
                     headers={
@@ -534,7 +534,7 @@ async def api_setup():
         print(f"SETUP: CallInitiatedCallbackUrl = {callback_url}")
         print(f"SETUP: CallStatusCallbackUrl = {status_url}")
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             res = await client.put(
                 f"https://{API_IP}/api/accounts/{BW_ACCOUNT_ID}/applications/{BW_APPLICATION_ID}",
                 headers={
