@@ -518,30 +518,41 @@ async def health():
 @app.post("/api/setup")
 async def api_setup():
     """Update Bandwidth application callback URLs to point to this server."""
+    import base64
     try:
-        token = await get_bw_token()
+        # Bandwidth Application API uses Basic Auth, not OAuth2
+        creds = base64.b64encode(f"{BW_CLIENT_ID}:{BW_CLIENT_SECRET}".encode()).decode()
+        callback_url = f"{BASE_URL}/bandwidth/webhooks/voice/initiate"
+        status_url = f"{BASE_URL}/bandwidth/webhooks/voice/status"
+        xml_body = f"""<Application>
+    <CallInitiatedCallbackUrl>{callback_url}</CallInitiatedCallbackUrl>
+    <CallInitiatedMethod>POST</CallInitiatedMethod>
+    <CallStatusCallbackUrl>{status_url}</CallStatusCallbackUrl>
+    <CallStatusMethod>POST</CallStatusMethod>
+</Application>"""
+        print(f"SETUP: Updating application {BW_APPLICATION_ID}")
+        print(f"SETUP: CallInitiatedCallbackUrl = {callback_url}")
+        print(f"SETUP: CallStatusCallbackUrl = {status_url}")
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             res = await client.put(
                 f"https://{API_IP}/api/accounts/{BW_ACCOUNT_ID}/applications/{BW_APPLICATION_ID}",
                 headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
+                    "Authorization": f"Basic {creds}",
+                    "Content-Type": "application/xml; charset=utf-8",
                     "Host": "api.bandwidth.com",
                 },
-                json={
-                    "CallInitiatedCallbackUrl": f"{BASE_URL}/bandwidth/webhooks/voice/initiate",
-                    "CallInitiatedMethod": "POST",
-                    "CallStatusCallbackUrl": f"{BASE_URL}/bandwidth/webhooks/voice/status",
-                    "CallStatusMethod": "POST",
-                },
+                content=xml_body,
             )
-            print(f"SETUP: {res.status_code} {res.text[:300]}")
+            print(f"SETUP RESPONSE: {res.status_code} {res.text[:500]}")
             if res.status_code == 200:
                 return JSONResponse(content={"ok": True, "message": "Application updated successfully"})
             else:
-                return JSONResponse(content={"ok": False, "error": res.text}, status_code=res.status_code)
+                return JSONResponse(content={"ok": False, "status": res.status_code, "error": res.text[:500]}, status_code=res.status_code)
     except Exception as e:
-        print(f"SETUP ERROR: {e}")
+        print(f"SETUP ERROR: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
