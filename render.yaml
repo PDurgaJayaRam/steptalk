@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: steptalk
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && python main.py
+    envVars:
+      - key: BASE_URL
+        sync: false
+      - key: BW_ACCOUNT_ID
+        sync: false
+      - key: BW_APPLICATION_ID
+        sync: false
+      - key: BW_CLIENT_ID
+        sync: false
+      - key: BW_CLIENT_SECRET
+        sync: false
+      - key: BW_PHONE_NUMBER
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: NVIDIA_API_URL
+        sync: false
+      - key: NVIDIA_MODEL
+        sync: false
