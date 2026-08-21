@@ -10,15 +10,14 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 
-# Force IPv4 DNS resolution (fixes Render DNS issues with voice.bandwidth.com)
-_orig_getaddrinfo = None
-def _patch_dns():
-    import socket
-    _orig_getaddrinfo = socket.getaddrinfo
-    def _getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
-        return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-    socket.getaddrinfo = _getaddrinfo_ipv4
-_patch_dns()
+# Try to resolve voice.bandwidth.com at startup to debug DNS
+import socket
+try:
+    _resolved = socket.getaddrinfo("voice.bandwidth.com", 443)
+    print(f"DNS OK: voice.bandwidth.com resolves to {_resolved[0][4]}")
+except Exception as e:
+    print(f"DNS FAIL: voice.bandwidth.com - {e}")
+    print("Falling back to api.bandwidth.com for Voice API")
 
 app = FastAPI()
 
@@ -48,6 +47,14 @@ NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "meta/llama-3.1-8b-instruct")
 
 # --- Server Config ---
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+
+# Voice API base URL - fallback to api.bandwidth.com if voice.bandwidth.com DNS fails
+VOICE_API_BASE = os.getenv("BW_VOICE_URL", "https://voice.bandwidth.com/api/v2")
+try:
+    socket.getaddrinfo("voice.bandwidth.com", 443)
+except Exception:
+    VOICE_API_BASE = "https://api.bandwidth.com/api/v2"
+    print(f"Using fallback Voice API: {VOICE_API_BASE}")
 
 SYSTEM_PROMPT = """You are a helpful, friendly AI voice assistant on a phone call.
 Keep responses short - 1 or 2 sentences max.
@@ -196,7 +203,7 @@ async def bw_create_call(to_number: str) -> dict:
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 res = await client.post(
-                    f"https://voice.bandwidth.com/api/v2/accounts/{BW_ACCOUNT_ID}/calls",
+                    f"{VOICE_API_BASE}/accounts/{BW_ACCOUNT_ID}/calls",
                     headers={
                         "Authorization": f"Bearer {token}",
                         "Content-Type": "application/json",
@@ -227,7 +234,7 @@ async def bw_hangup_call(call_id: str) -> dict:
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 res = await client.post(
-                    f"https://voice.bandwidth.com/api/v2/accounts/{BW_ACCOUNT_ID}/calls/{call_id}",
+                    f"{VOICE_API_BASE}/accounts/{BW_ACCOUNT_ID}/calls/{call_id}",
                     headers={
                         "Authorization": f"Bearer {token}",
                         "Content-Type": "application/json",
@@ -248,7 +255,7 @@ async def bw_get_calls() -> list:
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 res = await client.get(
-                    f"https://voice.bandwidth.com/api/v2/accounts/{BW_ACCOUNT_ID}/calls",
+                    f"{VOICE_API_BASE}/accounts/{BW_ACCOUNT_ID}/calls",
                     headers={"Authorization": f"Bearer {token}"},
                 )
                 return res.json() if res.status_code == 200 else []
