@@ -514,6 +514,37 @@ async def health():
     return {"status": "ok"}
 
 
+@app.post("/api/setup")
+async def api_setup():
+    """Update Bandwidth application callback URLs to point to this server."""
+    try:
+        token = await get_bw_token()
+        api_ip = _resolve_host("api.bandwidth.com") or "api.bandwidth.com"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            res = await client.put(
+                f"https://{api_ip}/api/accounts/{BW_ACCOUNT_ID}/applications/{BW_APPLICATION_ID}",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                    "Host": "api.bandwidth.com",
+                },
+                json={
+                    "CallInitiatedCallbackUrl": f"{BASE_URL}/bandwidth/webhooks/voice/initiate",
+                    "CallInitiatedMethod": "POST",
+                    "CallStatusCallbackUrl": f"{BASE_URL}/bandwidth/webhooks/voice/status",
+                    "CallStatusMethod": "POST",
+                },
+            )
+            print(f"SETUP: {res.status_code} {res.text[:300]}")
+            if res.status_code == 200:
+                return JSONResponse(content={"ok": True, "message": "Application updated successfully"})
+            else:
+                return JSONResponse(content={"ok": False, "error": res.text}, status_code=res.status_code)
+    except Exception as e:
+        print(f"SETUP ERROR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================
 # Static Files
 # ============================================================
