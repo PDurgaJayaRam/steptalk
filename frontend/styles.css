@@ -1,0 +1,663 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface-hover: #1a1a25;
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #e8e8ed;
+    --text-dim: #6b6b7b;
+    --accent: #4f8fff;
+    --accent-glow: rgba(79, 143, 255, 0.3);
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f59e0b;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.header h1 {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+}
+
+.status-dot.disconnected {
+    background: var(--red);
+}
+
+/* Main Layout */
+.main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* Panels */
+.panel {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.panel h2 {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+}
+
+/* Dial Panel */
+.dial-panel {
+    width: 340px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.dial-display {
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.dial-display input {
+    width: 100%;
+    padding: 16px;
+    font-size: 24px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.dial-display input:focus {
+    border-color: var(--accent);
+}
+
+.dial-display input::placeholder {
+    color: var(--text-dim);
+    font-size: 18px;
+}
+
+.dial-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 280px;
+    margin-bottom: 24px;
+}
+
+.dial-btn {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 22px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.dial-btn span {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+}
+
+.dial-btn:hover {
+    background: var(--surface-hover);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.dial-btn:active {
+    transform: scale(0.92);
+    background: rgba(79, 143, 255, 0.1);
+    border-color: var(--accent);
+}
+
+.dial-actions {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    max-width: 280px;
+}
+
+.btn-call {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: var(--green);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-call:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.btn-call:active {
+    transform: scale(0.97);
+}
+
+.btn-call:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-call.calling {
+    background: var(--red);
+}
+
+.btn-backspace {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-backspace:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.btn-backspace:active {
+    transform: scale(0.92);
+}
+
+/* Calls Panel */
+.calls-panel {
+    flex: 1;
+    min-width: 0;
+}
+
+.calls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.no-calls {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px 20px;
+    font-size: 14px;
+}
+
+.call-card {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    gap: 14px;
+}
+
+.call-card:hover {
+    background: var(--surface-hover);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.call-card.selected {
+    border-color: var(--accent);
+    background: rgba(79, 143, 255, 0.05);
+}
+
+.call-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.call-icon.inbound {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--green);
+}
+
+.call-icon.outbound {
+    background: rgba(79, 143, 255, 0.1);
+    color: var(--accent);
+}
+
+.call-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.call-number {
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.call-meta {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+}
+
+.call-status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.call-status-badge.ringing {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--orange);
+}
+
+.call-status-badge.active {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--green);
+    animation: pulse-badge 2s ease-in-out infinite;
+}
+
+.call-status-badge.completed {
+    background: rgba(107, 107, 123, 0.1);
+    color: var(--text-dim);
+}
+
+@keyframes pulse-badge {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Detail Panel */
+.detail-panel {
+    width: 380px;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.btn-back {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-back:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.detail-header h2 {
+    flex: 1;
+    font-size: 16px;
+    margin-bottom: 0;
+}
+
+.detail-status {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--green);
+}
+
+.detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: var(--surface);
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+}
+
+.detail-row .label {
+    color: var(--text-dim);
+}
+
+.detail-transcript {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--surface);
+    border-radius: 10px;
+    min-height: 200px;
+    margin-bottom: 16px;
+}
+
+.transcript-placeholder {
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+    padding-top: 40px;
+}
+
+.transcript-entry {
+    margin-bottom: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.transcript-entry .role {
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.transcript-entry.user .role {
+    color: var(--accent);
+}
+
+.transcript-entry.ai .role {
+    color: #a78bfa;
+}
+
+.transcript-entry.system {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.detail-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-hangup {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: var(--red);
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-hangup:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.btn-hangup:active {
+    transform: scale(0.97);
+}
+
+/* Settings Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 400px;
+    max-width: 90vw;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    font-size: 16px;
+}
+
+.btn-close-modal {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.btn-close-modal:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-body label {
+    display: block;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.modal-body input {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+}
+
+.modal-body input:focus {
+    border-color: var(--accent);
+}
+
+.btn-save {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.btn-save:hover {
+    filter: brightness(1.1);
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 14px;
+    z-index: 200;
+    animation: toast-in 0.3s ease;
+}
+
+.toast.error {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .main {
+        flex-direction: column;
+    }
+
+    .dial-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 20px;
+    }
+
+    .detail-panel {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border);
+    }
+
+    .dial-pad {
+        max-width: 240px;
+    }
+}
