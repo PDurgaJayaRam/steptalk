@@ -3,10 +3,22 @@ import uuid
 import time
 import asyncio
 import httpx
+import httpcore
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
+
+
+# Force IPv4 DNS resolution (fixes Render DNS issues with voice.bandwidth.com)
+_orig_getaddrinfo = None
+def _patch_dns():
+    import socket
+    _orig_getaddrinfo = socket.getaddrinfo
+    def _getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+        return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+    socket.getaddrinfo = _getaddrinfo_ipv4
+_patch_dns()
 
 app = FastAPI()
 
@@ -179,49 +191,72 @@ async def ask_llm(user_text: str, call_id: str) -> str:
 
 async def bw_create_call(to_number: str) -> dict:
     token = await get_bw_token()
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        res = await client.post(
-            f"https://voice.bandwidth.com/api/v2/accounts/{BW_ACCOUNT_ID}/calls",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "from": BW_PHONE_NUMBER,
-                "to": to_number,
-                "applicationId": BW_APPLICATION_ID,
-                "answerUrl": f"{BASE_URL}/bandwidth/webhooks/voice/answer",
-                "callStatusUrl": f"{BASE_URL}/bandwidth/webhooks/voice/status",
-                "tag": to_number,
-            },
-        )
-        if res.status_code not in (200, 201):
-            raise Exception(f"Failed to create call: {res.status_code} {res.text}")
-        return res.json()
+    last_err = None
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                res = await client.post(
+                    f"https://voice.bandwidth.com/api/v2/accounts/{BW_ACCOUNT_ID}/calls",
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "from": BW_PHONE_NUMBER,
+                        "to": to_number,
+                        "applicationId": BW_APPLICATION_ID,
+                        "answerUrl": f"{BASE_URL}/bandwidth/webhooks/voice/answer",
+                        "callStatusUrl": f"{BASE_URL}/bandwidth/webhooks/voice/status",
+                        "tag": to_number,
+                    },
+                )
+                if res.status_code not in (200, 201):
+                    raise Exception(f"HTTP {res.status_code}: {res.text}")
+                return res.json()
+        except Exception as e:
+            last_err = e
+            print(f"bw_create_call attempt {attempt+1} failed: {e}")
+            if attempt < 2:
+                await asyncio.sleep(2 ** attempt)
+    raise last_err
 
 
 async def bw_hangup_call(call_id: str) -> dict:
     token = await get_bw_token()
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        res = await client.post(
-            f"https://voice.bandwidth.com/api/v2/accounts/{BW_ACCOUNT_ID}/calls/{call_id}",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            json={"state": "completed"},
-        )
-        return res.json() if res.status_code == 200 else {}
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                res = await client.post(
+                    f"https://voice.bandwidth.com/api/v2/accounts/{BW_ACCOUNT_ID}/calls/{call_id}",
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"state": "completed"},
+                )
+                return res.json() if res.status_code == 200 else {}
+        except Exception as e:
+            print(f"bw_hangup attempt {attempt+1} failed: {e}")
+            if attempt < 2:
+                await asyncio.sleep(2 ** attempt)
+    return {}
 
 
 async def bw_get_calls() -> list:
     token = await get_bw_token()
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        res = await client.get(
-            f"https://voice.bandwidth.com/api/v2/accounts/{BW_ACCOUNT_ID}/calls",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        return res.json() if res.status_code == 200 else []
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                res = await client.get(
+                    f"https://voice.bandwidth.com/api/v2/accounts/{BW_ACCOUNT_ID}/calls",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                return res.json() if res.status_code == 200 else []
+        except Exception as e:
+            print(f"bw_get_calls attempt {attempt+1} failed: {e}")
+            if attempt < 2:
+                await asyncio.sleep(2 ** attempt)
+    return []
 
 
 # ============================================================
