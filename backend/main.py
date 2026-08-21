@@ -10,14 +10,21 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 
-# Try to resolve voice.bandwidth.com at startup to debug DNS
+# Resolve voice.bandwidth.com at startup, use IP directly to bypass async DNS issues
 import socket
-try:
-    _resolved = socket.getaddrinfo("voice.bandwidth.com", 443)
-    print(f"DNS OK: voice.bandwidth.com resolves to {_resolved[0][4]}")
-except Exception as e:
-    print(f"DNS FAIL: voice.bandwidth.com - {e}")
-    print("Falling back to api.bandwidth.com for Voice API")
+
+def _resolve_host(host):
+    try:
+        infos = socket.getaddrinfo(host, 443, socket.AF_INET)
+        ip = infos[0][4][0]
+        print(f"DNS OK: {host} -> {ip}")
+        return ip
+    except Exception as e:
+        print(f"DNS FAIL: {host} - {e}")
+        return None
+
+VOICE_IP = _resolve_host("voice.bandwidth.com") or "104.18.31.60"
+print(f"Using Voice API IP: {VOICE_IP}")
 
 app = FastAPI()
 
@@ -48,13 +55,10 @@ NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "meta/llama-3.1-8b-instruct")
 # --- Server Config ---
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
-# Voice API base URL - fallback to api.bandwidth.com if voice.bandwidth.com DNS fails
-VOICE_API_BASE = os.getenv("BW_VOICE_URL", "https://voice.bandwidth.com/api/v2")
-try:
-    socket.getaddrinfo("voice.bandwidth.com", 443)
-except Exception:
-    VOICE_API_BASE = "https://api.bandwidth.com/api/v2"
-    print(f"Using fallback Voice API: {VOICE_API_BASE}")
+# Voice API uses IP directly with Host header to avoid async DNS resolution issues
+VOICE_API_BASE = f"https://{VOICE_IP}/api/v2"
+BW_VOICE_HOST = "voice.bandwidth.com"
+BW_AUTH_HOST = "auth.bandwidth.com"
 
 SYSTEM_PROMPT = """You are a helpful, friendly AI voice assistant on a phone call.
 Keep responses short - 1 or 2 sentences max.
@@ -72,12 +76,16 @@ audio_files: dict[str, bytes] = {}  # filename -> audio bytes
 # ============================================================
 
 async def get_bw_token() -> str:
+    auth_ip = _resolve_host("auth.bandwidth.com") or "auth.bandwidth.com"
     async with httpx.AsyncClient(timeout=30.0) as client:
         res = await client.post(
-            "https://auth.bandwidth.com/v1/oauth2/token",
+            f"https://{auth_ip}/v1/oauth2/token",
             auth=(BW_CLIENT_ID, BW_CLIENT_SECRET),
             data={"grant_type": "client_credentials"},
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Host": "auth.bandwidth.com",
+            },
         )
         if res.status_code != 200:
             raise Exception(f"Failed to get Bandwidth token: {res.status_code} {res.text}")
@@ -207,6 +215,7 @@ async def bw_create_call(to_number: str) -> dict:
                     headers={
                         "Authorization": f"Bearer {token}",
                         "Content-Type": "application/json",
+                        "Host": BW_VOICE_HOST,
                     },
                     json={
                         "from": BW_PHONE_NUMBER,
@@ -238,6 +247,7 @@ async def bw_hangup_call(call_id: str) -> dict:
                     headers={
                         "Authorization": f"Bearer {token}",
                         "Content-Type": "application/json",
+                        "Host": BW_VOICE_HOST,
                     },
                     json={"state": "completed"},
                 )
@@ -256,7 +266,10 @@ async def bw_get_calls() -> list:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 res = await client.get(
                     f"{VOICE_API_BASE}/accounts/{BW_ACCOUNT_ID}/calls",
-                    headers={"Authorization": f"Bearer {token}"},
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Host": BW_VOICE_HOST,
+                    },
                 )
                 return res.json() if res.status_code == 200 else []
         except Exception as e:
